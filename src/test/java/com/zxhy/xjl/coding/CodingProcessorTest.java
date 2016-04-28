@@ -10,8 +10,6 @@ import com.zxhy.xjl.coding.domain.FF;
 public class CodingProcessorTest {
 	@Test
 	public void generateMapper(){
-		TableCodingLoader loader = new TableCodingLoader();
-		loader.buildTable(FF.class);
-		loader.generateMapper(FF.class);
+		CodingProcessor.generateMapper(FF.class);
 	}
 }

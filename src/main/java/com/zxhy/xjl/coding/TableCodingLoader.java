@@ -30,9 +30,9 @@ import com.zxhy.xjl.coding.annotation.Table;
  */
 public class TableCodingLoader {
 	private static Logger log = LoggerFactory.getLogger(TableCodingLoader.class);
-	private Map<Class, Table> domainTables = new HashMap<Class, Table>();
-	private Map<Class, Column> domainPKS = new HashMap<Class, Column>();
-	private Map<Class, Map<String, Column>> domainColumns = new HashMap<Class, Map<String, Column>>();
+	private static Map<Class, Table> domainTables = new HashMap<Class, Table>();
+	private static Map<Class, Column> domainPKS = new HashMap<Class, Column>();
+	private static Map<Class, Map<String, Column>> domainColumns = new HashMap<Class, Map<String, Column>>();
 	
 	public void buildTable(Class domain){
 		log.debug("开始构建表：" + domain.getName());
@@ -69,41 +69,44 @@ public class TableCodingLoader {
 		}
 		this.domainColumns.put(domain, columns);
 	}
-	public void generateMapper(Class domain){
-		Table table = this.domainTables.get(domain);
-		StringBuilder sb = new StringBuilder();
-		String mapperPackage = this.getMapperPackage(domain);
-		log.debug("mapperPackage:" + mapperPackage);
-		sb.append("package " + mapperPackage + ";\r\n");
-		sb.append("import java.util.List;\r\n");
-		sb.append("import org.apache.ibatis.annotations.Delete;\r\n");
-		sb.append("import org.apache.ibatis.annotations.Insert;\r\n");
-		sb.append("import org.apache.ibatis.annotations.Param;\r\n");
-		sb.append("import org.springframework.stereotype.Repository;\r\n");
-		sb.append("import " + domain.getName() + ";\r\n");
-		sb.append("@Repository\r\n");
-		String mapperClassName = domain.getSimpleName() + "Mapper";
-		log.debug("mapper名称:" + mapperClassName);
-		sb.append("public interface "+mapperClassName+" {\r\n");
-		sb.append("\t@Insert(\"insert into " + table.name());
-		log.debug("循环列");
-		Map<String, Column> columns = this.domainColumns.get(domain);
-		String fields = null;
-		String fieldValues = null;
-		Set<String> keys = columns.keySet();
-		for (String columnKey : keys) {
-			if (fields == null){
-				fields = columns.get(columnKey).name();
-				fieldValues = "#{" + columnKey + "}";
-			} else {
-				fields += "," + columns.get(columnKey).name();
-				fieldValues += ",#{" + columnKey + "}";
-			}
-			
+	/**
+	 * 得到表定义
+	 * @param domain
+	 * @return
+	 */
+	public Table getTable(Class domain){
+		return domainTables.get(domain);
+	}
+	/**
+	 * 得到基本包名称
+	 * @param domain
+	 * @return
+	 */
+	public String getBasePackage(Class domain){
+		String domainPackage = domain.getPackage().getName();
+		String basePackage;
+		if (domainPackage.endsWith(".domain")){
+			basePackage = domainPackage.substring(0, domainPackage.indexOf(".domain"));
+		} else {
+			basePackage = domainPackage;
 		}
-		sb.append("(" + fields + ") values (" + fieldValues + ")\")\r\n");
-		sb.append("\tpublic int insert(" + domain.getSimpleName() + " " + StringUtils.uncapitalize(domain.getSimpleName()) + ");\r\n");
-		sb.append("}");
+		return basePackage;
+	}
+	/**
+	 * 根据domain对象获取对应的列和字段属性
+	 * @param domain
+	 * @return
+	 */
+	public Map<String, Column> getColumns(Class domain){
+		return this.domainColumns.get(domain);
+	}
+	/**
+	 * 生成文件
+	 * @param sb
+	 * @param mapperPackage
+	 * @param mapperClassName
+	 */
+	public void generateFile(StringBuilder sb, String mapperPackage, String mapperClassName) {
 		File path = new File("src/main/java");
 		String[] packagePath = StringUtils.split(mapperPackage, ".");
 		
@@ -117,29 +120,5 @@ public class TableCodingLoader {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		
-	}
-	/**
-	 * 得到基本包名称
-	 * @param domain
-	 * @return
-	 */
-	private String getBasePackage(Class domain){
-		String domainPackage = domain.getPackage().getName();
-		String basePackage;
-		if (domainPackage.endsWith(".domain")){
-			basePackage = domainPackage.substring(0, domainPackage.indexOf(".domain"));
-		} else {
-			basePackage = domainPackage;
-		}
-		return basePackage;
-	}
-	/**
-	 * 得到mapper包名称
-	 * @param domain
-	 * @return
-	 */
-	private String getMapperPackage(Class domain){
-		return this.getBasePackage(domain) + ".mapper";
 	}
 }
